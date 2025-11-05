@@ -1,72 +1,83 @@
 import os
-import json
-import requests
+import chainlit as cl
 from dotenv import load_dotenv
+from azure.identity import DefaultAzureCredential
+from azure.ai.agents import AgentsClient
 
-# Load env from config/.env
-load_dotenv(dotenv_path=os.path.join("config", ".env"))
-
-AGENT_ENDPOINT = os.getenv("AGENT_ENDPOINT", "").strip()
-API_KEY = os.getenv("AZURE_OPENAI_API_KEY", "").strip()
-
-if not AGENT_ENDPOINT or not API_KEY:
-    raise RuntimeError(
-        "Missing AGENT_ENDPOINT or AZURE_OPENAI_API_KEY in config/.env")
-
-HEADERS = {
-    "Content-Type": "application/json",
-    "api-key": API_KEY
-}
+load_dotenv()
+endpoint = os.getenv("PROJECT_ENDPOINT")
+agent_id = os.getenv("AGENT_ID")
 
 
-def ask_agent(question: str) -> str:
-    """
-    Sends a user question to Azure AI Foundry Agent (which already has Knowledge/Vector Store attached).
-    The prompt tells the agent to ONLY use the uploaded documents.
-    """
-    payload = {
-        "messages": [
-            {
-                "role": "user",
-                "content": (
-                    "Use ONLY the connected knowledge base (uploaded PDFs) to answer. "
-                    "If the information is not in knowledge, reply exactly: 'Not in knowledge.'\n\n"
-                    f"Question: {question}"
-                )
-            }
-        ]
-    }
-
-    r = requests.post(AGENT_ENDPOINT, headers=HEADERS,
-                      data=json.dumps(payload), timeout=60)
-    r.raise_for_status()
-    data = r.json()
-
-    # Typical Agent Responses shape:
-    # {"output":{"message":{"content":[{"type":"text","text":"..."}]}}}
-    out = data.get("output", {}).get("message", {}).get("content", [])
-    texts = []
-    for part in out:
-        if isinstance(part, dict) and part.get("type") == "text":
-            texts.append(part.get("text", ""))
-    return "\n".join(texts).strip() or json.dumps(data, indent=2)
+@cl.on_chat_start
+async def start():
+    client = AgentsClient(
+        endpoint=endpoint, credential=DefaultAzureCredential())
+    cl.user_session.set("client", client)
+    await cl.Message(content="**Aryaan’s RealEstate Copilot** is LIVE 🏠\nAsk me anything!").send()
 
 
-def cli():
-    print("AURA — Real-Estate AI (Agent-connected). Type 'exit' to quit.")
-    while True:
-        q = input("\nYour question: ").strip()
-        if q.lower() == "exit":
-            break
-        try:
-            print("Thinking…")
-            ans = ask_agent(q)
-            print("\nAURA:", ans)
-        except requests.HTTPError as e:
-            print("\nHTTP Error:", e.response.status_code, e.response.text)
-        except Exception as e:
-            print("\nError:", str(e))
+@cl.on_message
+async def main(message: cl.Message):
+    client = cl.user_session.get("client")
+
+    # 1. Create thread once
+    thread = cl.user_session.get("thread")
+    if not thread:
+        thread = await client.threads.create()
+        cl.user_session.set("thread", thread)
+
+    # 2. Send your question
+    await client.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=message.content
+    )
+
+    # 3. Stream answer (the ONLY working way today)
+    response = cl.Message(content="")
+    await response.send()
+
+    run = await client.runs.create(thread_id=thread.id, agent_id=agent_id)
+    async for event in client.runs.stream(run.id):
+        if event.event == "thread.message.delta" and event.delta.text:
+            await response.stream_token(event.delta.text)
+        # Show [1][2] citations from your PDFs
+        if event.event == "thread.message.completed":
+            msg = await client.messages.get(thread.id, event.message.id)
+            for i, anno in enumerate(msg.annotations or [], 1):
+                if anno.type == "file_citation":
+                    await response.stream_token(f"[{i}]")
+
+    await response.update()
+
+load_dotenv()
+
+client = AgentsClient(
+    endpoint=os.getenv("PROJECT_ENDPOINT"),
+    credential=DefaultAzureCredential()
+)
 
 
-if __name__ == "__main__":
-    cli()
+@cl.on_chat_start
+async def ():
+    await cl.Message("🏠 **Aryaan’s RealEstate Copilot** is LIVE\nAsk me anything!").send()
+
+
+@cl.on_message
+async def (msg: cl.Message):
+    # 1. ONE-LINE thread
+    thread = await client.threads.create() if not cl.user_session.get("thread_id") else cl.user_session.get("thread")
+    if not cl.user_session.get("thread_id"):
+        cl.user_session.set("thread_id", thread.id)
+
+    # 2. ONE-LINE message
+    await client.messages.create(thread_id=thread.id, role="user", content=msg.content)
+
+    # 3. ONE-LINE stream
+    reply = cl.Message(content="")
+    await reply.send()
+    async for chunk in client.runs.stream_expanded(thread_id=thread.id, agent_id=os.getenv("AGENT_ID")):
+        if chunk.data.get("delta", {}).get("content"):
+            await reply.stream_token(chunk.data["delta"]["content"][0]["text"]["value"])
+    await reply.update()

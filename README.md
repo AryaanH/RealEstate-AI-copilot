@@ -1,4 +1,4 @@
-# Real-Estate AI (Azure AI Foundry Agent · Python Client)
+# Ask any suburb’s median price, rental yield, or council zoning in 3 seconds — powered by Azure AI Studio + 15 official ABS/Domain PDFs
 
 Python client that talks to **Azure AI Foundry Agent** (with Knowledge / Vector Store of AU real-estate PDFs).
 It returns **source-aware** answers using only the uploaded documents (RAG).
