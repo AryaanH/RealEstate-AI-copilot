@@ -77,35 +77,41 @@ GPT-4o-mini → Structured AURA Reply
 > **Recommendation:** Investors seeking capital growth may prefer VIC; for policy stability and affordability, NSW remains favorable.  
 
 ---
+## ⚙️ Local Setup
 
-## ⚙️ Local Setup  
-
-1️⃣ Clone the Repository 
+### Clone the Repository  
 ```bash
 git clone https://github.com/AryaanH/RealEstate-AI-Copilot.git
 cd RealEstate-AI-Copilot
+```
 
-2️⃣ Set up Python environment
+### Set up Python environment
+```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-3️⃣ Install dependencies
+### Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-4️⃣ Run the app
+### Run the app
+```bash
 uvicorn src.server:app --reload --port 8000
 
 Open http://localhost:8000 in your browser to access the UI.
+```
 
 ---
 
-Author
-Aryaan Hashim
+## 👨‍💻 Author  
 
-🎓 B.Eng. Software Engineering, Monash University
-☁️ Cloud & AI Engineer | Azure + AWS + Applied AI
-📍 Melbourne, Australia
-LinkedIn: linkedin.com/in/aryaan-hashim
-GitHub: github.com/AryaanH
+**Aryaan Hashim**  
+*B.Eng. Software Engineering, Monash University*  
+☁️ *Cloud & AI Engineer — Azure | AWS | Applied AI*  
+📍 *Melbourne, Australia*  
 
-Built to demonstrate applied Azure AI engineering — bridging data, design, and deployment.
+🔗 [LinkedIn](https://linkedin.com/in/aryaan-hashim) | [GitHub](https://github.com/AryaanH)
+
+> *Built to demonstrate applied Azure AI engineering — bridging data, design, and deployment.*
