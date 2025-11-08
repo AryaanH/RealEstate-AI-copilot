@@ -17,14 +17,13 @@ while True:
     if user_input.lower() == "exit":
         break
 
-    # 1) Add user message
+    #user message
     project.agents.messages.create(
         thread_id=thread.id,
         role="user",
         content=user_input
     )
 
-    # 2) Run the agent
     run = project.agents.runs.create_and_process(
         thread_id=thread.id,
         agent_id=agent.id
@@ -34,7 +33,7 @@ while True:
         print("Run failed:", run.last_error)
         continue
 
-    # 3) Fetch messages (no 'order' arg => works across SDK versions)
+    # fetching the message
     msgs = list(project.agents.messages.list(thread_id=thread.id))
 
     # filter assistant msgs that have text content
