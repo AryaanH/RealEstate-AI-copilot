@@ -1,111 +1,85 @@
 import os
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.templating import Jinja2Templates
+
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
-from typing import Optional, List
 
-app = FastAPI(
-    title="AURA — Real-Estate AI Copilot Appu",
-    version="1.0.0"
+# ---- CONFIG ----
+PROJECT_ENDPOINT = os.getenv(
+    "PROJECT_ENDPOINT",
+    "https://real-estate-ai-resource.services.ai.azure.com/api/projects/real-estate-ai"
 )
+AGENT_ID = os.getenv("AGENT_ID", "asst_Yen6GA5z99IQRRpGnSkJPOKN")
 
-#Static frontend
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # project root
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+print(f"Using endpoint: {PROJECT_ENDPOINT}")
+print(f"Using agent: {AGENT_ID}")
 
-# Serve /static/* for assets
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-#Azure AI Foundry client setup
-project = AIProjectClient(
-    credential=DefaultAzureCredential(),
-    endpoint="https://real-estate-ai-resource.services.ai.azure.com/api/projects/real-estate-ai"
-)
-
-AGENT_ID = "asst_mNSYbCoZ58f61IbiWlb0JVou"
+# ---- AUTH (AAD ONLY) ----
+credential = DefaultAzureCredential()
+project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=credential)
 agent = project.agents.get_agent(AGENT_ID)
 
-
-# Request/Response models
-class ChatRequest(BaseModel):
-    message: str
-    thread_id: Optional[str] = None  # if frontend wants to keep a session
-
-
-class ChatResponse(BaseModel):
-    reply: str
-    thread_id: str
+# ---- FASTAPI SETUP ----
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="static")
 
 
-#Helper to read latest aAI message
-def get_latest_assistant_message(thread_id: str) -> str:
-    msgs = list(project.agents.messages.list(thread_id=thread_id))
-
-    assistant_msgs = []
-    for m in msgs:
-        if m.role != "assistant" or not m.content:
-            continue
-        for part in m.content:
-            text_obj = getattr(part, "text", None)
-            if text_obj and getattr(text_obj, "value", None):
-                assistant_msgs.append((getattr(m, "created_at", 0), text_obj.value))
-
-    if not assistant_msgs:
-        return "(no response)"
-
-    assistant_msgs.sort(key=lambda x: x[0])
-    return assistant_msgs[-1][1].strip()
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
-#Routes
+@app.post("/chat")
+async def chat(payload: dict):
+    message = (payload.get("message") or "").strip()
+    thread_id = payload.get("thread_id")
 
-# Serve index.html on root
-@app.get("/")
-def serve_index():
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    return FileResponse(index_path)
+    if not message:
+        return JSONResponse({"error": "Empty message"}, status_code=400)
 
-
-@app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
-    # 1) Ensure message exists
-    user_msg = (req.message or "").strip()
-    if not user_msg:
-        raise HTTPException(status_code=400, detail="Empty message")
-
-    # 2) Use existing thread_id or create a new thread
-    if req.thread_id:
-        thread_id = req.thread_id
+    # New or existing thread
+    if thread_id:
+        thread = project.agents.threads.get(thread_id)
     else:
         thread = project.agents.threads.create()
-        thread_id = thread.id
 
-    # 3) Create user message in that thread
+    # Add user message
     project.agents.messages.create(
-        thread_id=thread_id,
+        thread_id=thread.id,
         role="user",
-        content=user_msg
+        content=message
     )
 
-    # 4) Run the agent
+    # Run agent
     run = project.agents.runs.create_and_process(
-        thread_id=thread_id,
-        agent_id=AGENT_ID
+        thread_id=thread.id,
+        agent_id=agent.id
     )
 
     if run.status == "failed":
-        # You can inspect run.last_error here if needed
-        raise HTTPException(status_code=500, detail="Agent run failed")
+        return JSONResponse(
+            {"error": str(run.last_error) if run.last_error else "Run failed"},
+            status_code=500,
+        )
 
-    # 5) Get the latest assistant reply
-    reply_text = get_latest_assistant_message(thread_id)
+    # Latest assistant message
+    messages = list(project.agents.messages.list(thread_id=thread.id))
+    assistant_msgs = [
+        m for m in messages
+        if m.role == "assistant"
+        and m.content
+        and getattr(m.content[0], "text", None)
+        and getattr(m.content[0].text, "value", None)
+    ]
 
-    return ChatResponse(
-        reply=reply_text,
-        thread_id=thread_id
-    )
+    if not assistant_msgs:
+        return {"reply": "No response from AURA.", "thread_id": thread.id}
 
-# uvicorn src.server:app --reload --port 8000
+    latest = max(assistant_msgs, key=lambda m: getattr(m, "created_at", 0))
+    reply = latest.content[0].text.value
+
+    return {"reply": reply, "thread_id": thread.id}
