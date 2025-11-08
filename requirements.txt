@@ -2,6 +2,8 @@ azure-ai-projects==1.0.0.*
 azure-ai-agents==1.0.0.*
 azure-identity
 python-dotenv
+jinja2
 fastapi
 uvicorn
 requests
+marked

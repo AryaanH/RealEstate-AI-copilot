@@ -1,3 +1,6 @@
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from azure.ai.projects import AIProjectClient
@@ -5,9 +8,16 @@ from azure.identity import DefaultAzureCredential
 from typing import Optional, List
 
 app = FastAPI(
-    title="AURA — Real-Estate AI Copilot API",
+    title="AURA — Real-Estate AI Copilot Appu",
     version="1.0.0"
 )
+
+#Static frontend
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # project root
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# Serve /static/* for assets
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 #Azure AI Foundry client setup
 project = AIProjectClient(
@@ -52,9 +62,11 @@ def get_latest_assistant_message(thread_id: str) -> str:
 
 #Routes
 
+# Serve index.html on root
 @app.get("/")
-def root():
-    return {"status": "ok", "message": "AURA API is running"}
+def serve_index():
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    return FileResponse(index_path)
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -95,3 +107,5 @@ def chat(req: ChatRequest):
         reply=reply_text,
         thread_id=thread_id
     )
+
+# uvicorn src.server:app --reload --port 8000

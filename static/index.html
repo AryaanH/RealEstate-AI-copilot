@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AURA — Real-Estate AI Copilot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar (ChatGPT-style, but branded) -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-mark">AU</div>
+        <div class="sidebar-logo-text">
+          <span class="brand-title">AURA Copilot</span>
+          <span class="brand-sub">Real-Estate Intelligence</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Capabilities</div>
+        <ul class="sidebar-list">
+          <li>Analyse AU housing affordability</li>
+          <li>Compare suburbs & states</li>
+          <li>Identify rental yield hotspots</li>
+          <li>Summarise dense property reports</li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Powered by</div>
+        <div class="sidebar-tags">
+          <span class="tag">Azure AI Foundry</span>
+          <span class="tag">GPT-4o mini</span>
+          <span class="tag">RAG · Vector Store</span>
+          <span class="tag">Python · FastAPI</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Suggested prompts</div>
+        <button class="prompt-btn" data-q="Summarise the key housing affordability trends from the uploaded reports.">
+          National affordability overview
+        </button>
+        <button class="prompt-btn" data-q="Which Melbourne suburbs mentioned in the documents show strong rental yields for long-term investors?">
+          Melbourne investor hotspots
+        </button>
+        <button class="prompt-btn" data-q="Compare VIC vs NSW housing trends using only the provided documents.">
+          VIC vs NSW performance
+        </button>
+        <button class="prompt-btn" data-q="From the documents, what risks and opportunities do you see for first-home buyers?">
+          First-home buyer insights
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        Built by <strong>Aryaan Hashim</strong><br />
+        Azure AI · Cloud Portfolio Project
+      </div>
+    </aside>
+
+    <!-- Main chat area -->
+    <main class="main">
+      <header class="main-header">
+        <div>
+          <h1>AURA — Real-Estate AI Copilot</h1>
+          <p>
+            A domain-grounded AI consultant for the Australian property market.
+            Ask questions and AURA responds using your curated real-estate documents.
+          </p>
+        </div>
+        <div class="status-pill">
+          Connected to Azure AI Foundry Agent
+        </div>
+      </header>
+
+      <section id="messages" class="chat-window">
+        <div class="msg msg-bot">
+          <div class="avatar avatar-bot">A</div>
+          <div class="bubble bubble-bot">
+            🏙️ I’m <strong>AURA</strong>, your AI Real-Estate Consultant. I specialise in Australian housing affordability,
+            suburb growth, and rental yields using the reports I’m connected to. Ask me something specific to begin.
+          </div>
+        </div>
+      </section>
+
+      <section class="input-bar">
+        <div class="input-wrapper">
+          <input
+            id="input"
+            class="input-field"
+            placeholder="Ask about suburbs, price trends, yields, or investment strategy grounded in your documents..."
+          />
+        </div>
+        <button id="send" class="send-btn">Send</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+  
+</body>
+</html>
