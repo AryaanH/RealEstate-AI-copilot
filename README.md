@@ -97,7 +97,6 @@ uvicorn src.server:app --reload --port 8000
 
 Open http://localhost:8000 in your browser to access the UI.
 
-
 Author
 Aryaan Hashim
 
