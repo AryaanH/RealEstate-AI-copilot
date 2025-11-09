@@ -1,85 +1,91 @@
+from dotenv import load_dotenv
 import os
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
-from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
+from azure.ai.projects import AIProjectClient
 
-# ---- CONFIG ----
-PROJECT_ENDPOINT = os.getenv(
-    "PROJECT_ENDPOINT",
-    "https://real-estate-ai-resource.services.ai.azure.com/api/projects/real-estate-ai"
-)
-AGENT_ID = os.getenv("AGENT_ID", "asst_Yen6GA5z99IQRRpGnSkJPOKN")
+# --- Config from env (works locally, Docker, App Service) ---
+load_dotenv('config/.env')
 
-print(f"Using endpoint: {PROJECT_ENDPOINT}")
-print(f"Using agent: {AGENT_ID}")
+PROJECT_ENDPOINT = os.getenv("PROJECT_ENDPOINT")
+AGENT_ID = os.getenv("AGENT_ID")
 
-# ---- AUTH (AAD ONLY) ----
+
+if not PROJECT_ENDPOINT or not AGENT_ID:
+    raise RuntimeError("PROJECT_ENDPOINT and AGENT_ID must be set.")
+
+# --- Auth: AAD only (NO AzureKeyCredential here) ---
+
 credential = DefaultAzureCredential()
 project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=credential)
 agent = project.agents.get_agent(AGENT_ID)
 
-# ---- FASTAPI SETUP ----
+# --- FastAPI setup ---
+
 app = FastAPI()
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="static")
+
+
+class ChatRequest(BaseModel):
+    message: str
+    thread_id: str | None = None
 
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def index():
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        return f.read()
 
 
 @app.post("/chat")
-async def chat(payload: dict):
-    message = (payload.get("message") or "").strip()
-    thread_id = payload.get("thread_id")
+async def chat(req: ChatRequest):
+    try:
+        # 1) thread
+        thread_id = req.thread_id
+        if not thread_id:
+            thread = project.agents.threads.create()
+            thread_id = thread.id
 
-    if not message:
-        return JSONResponse({"error": "Empty message"}, status_code=400)
-
-    # New or existing thread
-    if thread_id:
-        thread = project.agents.threads.get(thread_id)
-    else:
-        thread = project.agents.threads.create()
-
-    # Add user message
-    project.agents.messages.create(
-        thread_id=thread.id,
-        role="user",
-        content=message
-    )
-
-    # Run agent
-    run = project.agents.runs.create_and_process(
-        thread_id=thread.id,
-        agent_id=agent.id
-    )
-
-    if run.status == "failed":
-        return JSONResponse(
-            {"error": str(run.last_error) if run.last_error else "Run failed"},
-            status_code=500,
+        # 2) user msg
+        project.agents.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=req.message,
         )
 
-    # Latest assistant message
-    messages = list(project.agents.messages.list(thread_id=thread.id))
-    assistant_msgs = [
-        m for m in messages
-        if m.role == "assistant"
-        and m.content
-        and getattr(m.content[0], "text", None)
-        and getattr(m.content[0].text, "value", None)
-    ]
+        # 3) run
+        run = project.agents.runs.create_and_process(
+            thread_id=thread_id,
+            agent_id=agent.id,
+        )
+        if run.status == "failed":
+            raise HTTPException(status_code=500, detail=str(run.last_error))
 
-    if not assistant_msgs:
-        return {"reply": "No response from AURA.", "thread_id": thread.id}
+        # 4) latest assistant msg
+        msgs = list(project.agents.messages.list(thread_id=thread_id))
+        assistant_msgs = [
+            m for m in msgs
+            if m.role == "assistant"
+            and m.content
+            and getattr(m.content[0], "text", None)
+            and getattr(m.content[0].text, "value", None)
+        ]
 
-    latest = max(assistant_msgs, key=lambda m: getattr(m, "created_at", 0))
-    reply = latest.content[0].text.value
+        if not assistant_msgs:
+            raise HTTPException(status_code=500, detail="No assistant reply.")
 
-    return {"reply": reply, "thread_id": thread.id}
+        latest = max(assistant_msgs, key=lambda m: getattr(m, "created_at", 0))
+        reply = latest.content[0].text.value
+
+        return {"reply": reply, "thread_id": thread_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # surface real error while we’re debugging
+        raise HTTPException(status_code=500, detail=str(e))
