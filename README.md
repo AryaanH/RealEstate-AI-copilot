@@ -105,6 +105,11 @@ Open http://localhost:8000 in your browser to access the UI.
 
 ---
 
+## Live Demo
+https://aura-realestate.azurewebsites.net/
+
+---
+
 ## 👨‍💻 Author  
 
 **Aryaan Hashim**  
