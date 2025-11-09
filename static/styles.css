@@ -345,3 +345,164 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 18px 40px rgba(0,0,0,1);
 }
+
+/* Tablets & down */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 8px;
+    height: 100vh;
+    max-height: 100vh;
+  }
+
+  .sidebar {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    width: 100%;
+    border-radius: 18px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .sidebar-logo {
+    padding-bottom: 0;
+    border-bottom: none;
+    margin-right: 4px;
+  }
+
+  .brand-title {
+    font-size: 0.72rem;
+  }
+
+  .brand-sub {
+    font-size: 0.58rem;
+  }
+
+  .sidebar-section {
+    flex-direction: column;
+    gap: 3px;
+    font-size: 0.6rem;
+    min-width: max-content;
+  }
+
+  .sidebar-label {
+    font-size: 0.6rem;
+  }
+
+  .sidebar-list {
+    display: none; /* keep mobile clean */
+  }
+
+  .sidebar-tags {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+  }
+
+  .tag {
+    font-size: 0.55rem;
+    padding: 3px 6px;
+    white-space: nowrap;
+  }
+
+  .prompt-btn {
+    font-size: 0.6rem;
+    padding: 5px 7px;
+    white-space: nowrap;
+  }
+
+  .main {
+    padding: 10px 10px 8px;
+    border-radius: 20px;
+  }
+
+  .main-header {
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+
+  .main-header h1 {
+    font-size: 0.9rem;
+  }
+
+  .main-header p {
+    font-size: 0.6rem;
+  }
+
+  .status-pill {
+    font-size: 0.52rem;
+    padding: 4px 8px;
+  }
+
+  .chat-window {
+    margin-top: 6px;
+    padding: 8px;
+    gap: 6px;
+    font-size: 0.72rem;
+    /* use remaining height: header + input */
+    max-height: calc(100vh - 190px);
+  }
+
+  .msg {
+    max-width: 100%;
+  }
+
+  .bubble-bot,
+  .bubble-user {
+    font-size: 0.7rem;
+    padding: 7px 9px;
+  }
+
+  .input-bar {
+    margin-top: 6px;
+    gap: 6px;
+  }
+
+  .input-wrapper {
+    padding: 0 8px;
+  }
+
+  .input-field {
+    font-size: 0.7rem;
+    padding: 7px 0;
+  }
+
+  .send-btn {
+    font-size: 0.68rem;
+    padding: 6px 10px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 520px) {
+  .layout {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .sidebar {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .main {
+    padding: 8px;
+  }
+
+  .chat-window {
+    max-height: calc(100vh - 180px);
+  }
+
+  .bubble-bot,
+  .bubble-user {
+    font-size: 0.66rem;
+  }
+
+  .send-btn {
+    padding: 5px 9px;
+  }
+}
+
