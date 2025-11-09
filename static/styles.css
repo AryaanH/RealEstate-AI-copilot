@@ -347,18 +347,21 @@ body {
 }
 
 /* Tablets & down */
+/* Tablets & down */
 @media (max-width: 900px) {
   .layout {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     padding: 8px;
-    height: 100vh;
-    max-height: 100vh;
+    height: auto;
+    max-height: none;
+    min-height: 100vh;
   }
 
   .sidebar {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
     padding: 8px 10px;
     width: 100%;
@@ -370,7 +373,8 @@ body {
   .sidebar-logo {
     padding-bottom: 0;
     border-bottom: none;
-    margin-right: 4px;
+    margin-right: 6px;
+    flex-shrink: 0;
   }
 
   .brand-title {
@@ -415,8 +419,13 @@ body {
   }
 
   .main {
-    padding: 10px 10px 8px;
+    padding: 10px;
     border-radius: 20px;
+    height: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* important so chat-window can flex */
   }
 
   .main-header {
@@ -442,8 +451,9 @@ body {
     padding: 8px;
     gap: 6px;
     font-size: 0.72rem;
-    /* use remaining height: header + input */
-    max-height: calc(100vh - 190px);
+    flex: 1;
+    max-height: none;
+    overflow-y: auto;
   }
 
   .msg {
@@ -493,7 +503,8 @@ body {
   }
 
   .chat-window {
-    max-height: calc(100vh - 180px);
+    flex: 1;
+    max-height: none;
   }
 
   .bubble-bot,
@@ -503,6 +514,6 @@ body {
 
   .send-btn {
     padding: 5px 9px;
+    font-size: 0.64rem;
   }
 }
-
