@@ -7,7 +7,6 @@ let threadId = null;
 
 /**
  * Append a chat bubble to the UI.
- * Uses Markdown rendering for assistant messages (via marked.js).
  */
 function appendMessage(role, text) {
   const msg = document.createElement("div");
@@ -36,10 +35,7 @@ function appendMessage(role, text) {
 }
 
 /**
- * Clean up AURA's raw reply into nice, predictable Markdown.
- * - Strip citation junk like [<source>]
- * - Normalize whitespace
- * - Make "Recommendation:" stand out
+ * Cleaning up AURA's raw reply
  */
 function formatReply(raw) {
   if (!raw) return "No response available.";
@@ -61,7 +57,7 @@ function formatReply(raw) {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  // Ensure Recommendation stands out, but don't mangle content
+  // Highlighting recommendations
   text = text.replace(/recommendation:\s*/i, "\n\n**Recommendation:** ");
 
   return text.trim();
@@ -86,7 +82,7 @@ async function sendMessage(textOverride) {
   avatar.textContent = "A";
   const bubble = document.createElement("div");
   bubble.className = "bubble bubble-bot";
-  bubble.textContent = "Analyzing your property data...";
+  bubble.textContent = "AURA is thinking";
   thinking.appendChild(avatar);
   thinking.appendChild(bubble);
   messagesEl.appendChild(thinking);

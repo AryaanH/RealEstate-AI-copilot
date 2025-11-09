@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 
-# --- Config from env (works locally, Docker, App Service) ---
+# --- loading env from config---
 load_dotenv('config/.env')
 
 PROJECT_ENDPOINT = os.getenv("PROJECT_ENDPOINT")
@@ -18,14 +18,12 @@ AGENT_ID = os.getenv("AGENT_ID")
 if not PROJECT_ENDPOINT or not AGENT_ID:
     raise RuntimeError("PROJECT_ENDPOINT and AGENT_ID must be set.")
 
-# --- Auth: AAD only (NO AzureKeyCredential here) ---
 
 credential = DefaultAzureCredential()
 project = AIProjectClient(endpoint=PROJECT_ENDPOINT, credential=credential)
 agent = project.agents.get_agent(AGENT_ID)
 
-# --- FastAPI setup ---
-
+# FastAPI
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -66,7 +64,7 @@ async def chat(req: ChatRequest):
         if run.status == "failed":
             raise HTTPException(status_code=500, detail=str(run.last_error))
 
-        # 4) latest assistant msg
+        # 4) recent assistant msg
         msgs = list(project.agents.messages.list(thread_id=thread_id))
         assistant_msgs = [
             m for m in msgs
